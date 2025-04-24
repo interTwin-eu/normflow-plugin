@@ -26,11 +26,14 @@ packages.
 with `python -m venv .venv`.
 - Activate the virtual environment `source .venv/bin/activate`.
 - Install `uv` package manager with `pip install uv`.
-- Then install the plugin with `pip install .`. This will install both
+- Then install the plugin with `uv pip install .`. This will install both
 `itwinai` and `normflow` repisotory. For new developments in the `normflow`
 package, the source files located under `src/itwinai/plugins/normflow` have
 to be modified.
+To install in an HPC environment, please follow the instructions on the required
+modules in the `itwinai` documentation [here](https://itwinai.readthedocs.io/latest/installation/developer_installation.html). Once the modules are loaded, rest of the installation
+procedure is same as above.
 
-These steps will setup the environment for running this plugin. For running
-the plugin, further instructions can be found in the `README.md` under
-`src/itwinai/plugins/normflow`.
+These steps will setup the environment for running this plugin. For launching
+a pipeline or training, further instructions can be found in the `README.md`
+under `src/itwinai/plugins/normflow`.
