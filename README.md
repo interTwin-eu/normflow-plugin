@@ -31,7 +31,9 @@ with `python -m venv .venv`.
 package, the source files located under `src/itwinai/plugins/normflow` have
 to be modified.
 To install in an HPC environment, please follow the instructions on the required
-modules in the `itwinai` documentation [here](https://itwinai.readthedocs.io/latest/installation/developer_installation.html). Once the modules are loaded, rest of the installation
+modules in the `itwinai` documentation
+[here](https://itwinai.readthedocs.io/latest/installation/developer_installation.html).
+Once the modules are loaded, rest of the installation
 procedure is same as above.
 
 These steps will setup the environment for running this plugin. For launching
