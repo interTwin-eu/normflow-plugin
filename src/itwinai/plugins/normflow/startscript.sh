@@ -22,6 +22,7 @@ export SRUN_CPUS_PER_TASK="$SLURM_CPUS_PER_TASK"
 ml Stages/2024 GCC OpenMPI CUDA/12 MPI-settings/CUDA Python HDF5 PnetCDF libaio mpi4py
 
 # Activate the virtual environment
+# shellcheck disable=SC1091
 source ../../.venv/bin/activate
 
 export MASTER_ADDR="$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)"

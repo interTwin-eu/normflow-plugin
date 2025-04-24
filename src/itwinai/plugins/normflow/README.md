@@ -1,4 +1,5 @@
-normflow
+# normflow
+
 [![SQAaaS badge shields.io](https://img.shields.io/badge/sqaaas%20software-silver-lightgrey)](https://api.eu.badgr.io/public/assertions/-g9rQYZJTyi4S-VUrbvqlQ "SQAaaS silver badge achieved")
 [![License: MIT](https://cdn.prod.website-files.com/5e0f1144930a8bc8aace526c/65dd9eb5aaca434fac4f1c34_License-MIT-blue.svg)](LICENSE)
 --------
@@ -19,11 +20,11 @@ applicability.
 In a nutshell, three essential components are required for the method of
 normalizing flows:
 
-*   A **prior distribution** to draw initial samples.
-*   A **neural network** to perform a series of invertible transformations on
-    the samples.
-*   An **action** that specifies the target distribution, defining the goal of
-    the generative model.
+* A **prior distribution** to draw initial samples.
+* A **neural network** to perform a series of invertible transformations on
+the samples.
+* An **action** that specifies the target distribution, defining the goal of
+the generative model.
 
 The central high-level class of the package is called `Model`, which can be
 instantiated by providing instances of the three objects mentioned above:
@@ -62,20 +63,21 @@ model:
 
 In this example, we have:
 
--   **Prior Distribution**: A normal distribution is used with a shape of`[1]`.
+* **Prior Distribution**: A normal distribution is used with a shape of`[1]`.
 
--   **Action**: A quartic scalar theory is defined with parameters
-    `kappa=0`, `m_sq=-2.0`, and `lambda=0.2`.
+* **Action**: A quartic scalar theory is defined with parameters
+`kappa=0`, `m_sq=-2.0`, and `lambda=0.2`.
 
--   **Neural Network**: The `DistConvertor_` class is used to create the
-    transformation network, with `knots_len=10` and symmetry enabled.
-    Any instance of this class converts the probability distribution of inputs
-    using a rational quadratic spline. In this example, the spline has 10 knots,
-    and the distribution is assumed to be symmetric with respect to the origin.
+* **Neural Network**: The `DistConvertor_` class is used to create the
+transformation network, with `knots_len=10` and symmetry enabled.
+Any instance of this class converts the probability distribution of inputs
+using a rational quadratic spline. In this example, the spline has 10 knots,
+and the distribution is assumed to be symmetric with respect to the origin.
 
 The other parameters for training are specified within the same `yaml` file.
 For conciseness, only few of the options, the `config` parameter, epochs and strategy
 are shown in the snippet here.
+
 ```yaml
 config:
     optim_lr: 0.001
@@ -84,6 +86,7 @@ config:
 epochs: 100
 strategy: "ddp"
 ```
+
 These settings will train the model for `100` epochs with a batch size of `128`,
 learning rate `optim_lr` of `0.001` and `weight_decay` of `0.01`. The strategy
 for distributing the training is specified with the `strategy` flag, which is set
@@ -91,9 +94,11 @@ to `ddp` here, which implies the default PyTorch-based Distributed Data Parallel
 strategy.
 
 In order to launch the pipeline, simply run:
+
 ```
 itwinai exec-pipeline --config-name config.yaml +pipe_key=training_pipeline
 ```
+
 The above code block results in an output similar to:
 
 ```
@@ -139,15 +144,18 @@ Alternatively, the model initialization and training can also be performed
 using the `train.py` file, which provides another interface to the user to build
 the models and launch the training with configurations files defined within the
 Python script. When using this script to launch the training, one can do so by:
+
 ```
 python train.py
 ```
 
 For working on HPC systems,  a `startscript.sh` file is provided. This can be launched
 by:
+
 ```
 sbatch startscript.sh
 ```
+
 In the startscript, `nodes` specifies the number of workers to be used for training.
 You can efficiently scale your model training across multiple GPUs, enhancing
 performance and reducing training time. This flexibility allows you to tackle
@@ -182,6 +190,8 @@ x = model.mcmc.sample(n)
 This command draws `n` samples from the trained distribution and applies a
 Metropolis accept/reject step to ensure that the samples are correctly drawn.
 
+<!-- markdownlint-disable MD033 -->
+
 <p align="center">
     <img src="docs/images/Normflow.png" alt="Block diagram for the method of normalizing flows" width="80%" />
 </p>
@@ -189,6 +199,7 @@ Metropolis accept/reject step to ensure that the samples are correctly drawn.
     Block diagram for the method of normalizing flows
 </p>
 
+<!-- markdownlint-enable MD033 -->
 
 The *TRAIN* and *GENERATE* blocks in the above figure depict the procedures for
 training the model and generating samples/configurations. For more information

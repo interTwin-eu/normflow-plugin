@@ -8,6 +8,6 @@
 
 ## Style guide
 
-### git commit message
+### Git commit message
 
-### python code style 
+### python code style
