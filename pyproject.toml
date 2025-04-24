@@ -13,7 +13,7 @@ authors = [{ name = "User Name", email = "user@example.com" }]
 dependencies = [
     "itwinai[torch]",
     "pytest>=8.3.4",
-    "normflow @ file://./src/itwinai/plugins/normflow"
+    "normflow"
 ]
 
 [tool.setuptools.packages.find]
@@ -26,6 +26,9 @@ where = ["src"]
 include = [
     "itwinai.plugins.normflow",
 ]
+
+[tool.uv.sources]
+normflow = { path = "src/itwinai/plugins/normflow" }
 
 # Ruff configuration: https://docs.astral.sh/ruff/configuration/
 [tool.ruff]
