@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export MLFLOW_TRACKING_INSECURE_TLS="true"
+export MLFLOW_TRACKING_USERNAME="xxx"
+export MLFLOW_TRACKING_PASSWORD="xxx"
