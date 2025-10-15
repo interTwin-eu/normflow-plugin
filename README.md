@@ -39,3 +39,6 @@ procedure is same as above.
 These steps will setup the environment for running this plugin. For launching
 a pipeline or training, further instructions can be found in the `README.md`
 under `src/itwinai/plugins/normflow`.
+
+If you want to use the remote interTwin Mlflow server, remember to run the
+`mlflow-setup.sh` script.

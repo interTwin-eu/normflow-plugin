@@ -21,7 +21,8 @@ to perform distributed training, profiling and logging.
 import torch
 import torch.distributed as dist
 import time
-import os, sys
+import os
+import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, Literal, Optional, Tuple
 from torch.utils.data import Dataset
@@ -36,7 +37,7 @@ from normflow.action.scalar_action import ScalarPhi4Action
 
 from itwinai.torch.trainer import TorchTrainer
 from itwinai.torch.distributed import DeepSpeedStrategy
-from itwinai.loggers import EpochTimeTracker, Logger
+from itwinai.loggers import Logger
 from itwinai.torch.monitoring.monitoring import measure_gpu_utilization
 from itwinai.torch.profiling.profiler import profile_torch_trainer
 from itwinai.distributed import suppress_workers_print
@@ -109,9 +110,7 @@ class Posterior:
 
     @torch.no_grad()
     def sample_(
-        self,
-        batch_size: int = 1,
-        preprocess_func: Callable | None = None
+        self, batch_size: int = 1, preprocess_func: Callable | None = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Draws samples and their log probabilities from the model.
 
@@ -137,9 +136,7 @@ class Posterior:
 
     @torch.no_grad()
     def sample__(
-        self,
-        batch_size: int = 1,
-        **kwargs
+        self, batch_size: int = 1, **kwargs
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Similar to `sample_`, but also returns the log probability of the
         target distribution from `model.action`.
@@ -175,21 +172,18 @@ class Posterior:
 
 class Fitter(TorchTrainer):
     """A class for training a given model."""
+
     def __init__(
         self,
         model: Model,
         epochs: int,
         config: Dict | TrainingConfiguration | None = None,
-        strategy: Literal["ddp", "deepspeed", "horovod"] = 'ddp',
+        strategy: Literal["ddp", "deepspeed", "horovod"] = "ddp",
         logger: Logger | None = None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
-            config=config,
-            epochs=epochs,
-            strategy=strategy,
-            logger=logger,
-            **kwargs
+            config=config, epochs=epochs, strategy=strategy, logger=logger, **kwargs
         )
         self._model = model
         self.epochs = epochs
@@ -201,13 +195,11 @@ class Fitter(TorchTrainer):
             display=self.config.ckpt_disp,
             print_stride=self.config.print_stride,
             print_batch_size=self.config.print_batch_size,
-            snapshot_path=self.config.snapshot_path or 'checkpoint.pth',
-            epochs_run=self.config.epochs_run
+            snapshot_path=self.config.snapshot_path or "checkpoint.pth",
+            epochs_run=self.config.epochs_run,
         )
         self.train_batch_size = 1
-        self.train_history = dict(
-            loss=[], logqp=[], logz=[], ess=[], rho=[], accept_rate=[]
-        )
+        self.train_history = dict(loss=[], logqp=[], logz=[], ess=[], rho=[], accept_rate=[])
         self.hyperparam = dict(lr=self.config.optim_lr, weight_decay=self.config.weight_decay)
 
     def setup_seed(self, rank: int, world_size: int) -> None:
@@ -243,7 +235,7 @@ class Fitter(TorchTrainer):
         self,
         train_dataset: Dataset,
         validation_dataset: Dataset | None = None,
-        test_dataset: Dataset | None = None
+        test_dataset: Dataset | None = None,
     ) -> None:
         """Overrides create_dataloaders method from itwinai TorchTrainer and returns
         nothing since this is not needed in this use-case.
@@ -269,15 +261,13 @@ class Fitter(TorchTrainer):
         if isinstance(self.strategy, DeepSpeedStrategy):
             # Batch size definition is not optional for DeepSpeedStrategy!
             distribute_kwargs = dict(
-                config_params=dict(
-                    train_micro_batch_size_per_gpu=self.config.batch_size
-                )
+                config_params=dict(train_micro_batch_size_per_gpu=self.config.batch_size)
             )
         else:
             distribute_kwargs = {}
 
         optimizer_class = eval(self.config.optimizer_class)
-        if '_groups' in self._model.net_.__dict__.keys():
+        if "_groups" in self._model.net_.__dict__.keys():
             parameters = self._model.net_.grouped_parameters()
         else:
             parameters = self._model.net_.parameters()
@@ -292,12 +282,14 @@ class Fitter(TorchTrainer):
         self.setup_seed(self.strategy.global_rank(), self.strategy.global_world_size())
 
         # decide whether to load a snapshot
-        snapshot_path = self.checkpoint_dict['snapshot_path']
+        snapshot_path = self.checkpoint_dict["snapshot_path"]
         if (snapshot_path is not None) and os.path.exists(snapshot_path):
             print(f"Trying to load snapshot from {snapshot_path}")
             self._load_snapshot()
 
-        self.loss_fn = Fitter.calc_kl_mean if self.config.loss_fn == "None" else self.config.loss_fn
+        self.loss_fn = (
+            Fitter.calc_kl_mean if self.config.loss_fn == "None" else self.config.loss_fn
+        )
 
         if not self.config.scheduler or self.config.scheduler == "None":
             self.scheduler = None
@@ -313,7 +305,7 @@ class Fitter(TorchTrainer):
         self,
         train_dataset: Dataset | None = None,
         validation_dataset: Dataset | None = None,
-        test_dataset: Dataset | None = None
+        test_dataset: Dataset | None = None,
     ) -> None:
         """Overrides execute method from itwinai TorchTrainer class to ignore
         train_dataset since it is not needed in this usecase.
@@ -333,7 +325,7 @@ class Fitter(TorchTrainer):
 
     def _load_snapshot(self) -> None:
         """Method to load a snapshot from a path provided in checkpoint_dict"""
-        snapshot_path = self.checkpoint_dict['snapshot_path']
+        snapshot_path = self.checkpoint_dict["snapshot_path"]
         if torch.cuda.is_available():
             gpu_id = self.strategy.global_rank()
             loc = f"cuda:{gpu_id}"
@@ -343,8 +335,10 @@ class Fitter(TorchTrainer):
             print("CPU: Attempting to load saved model")
         snapshot = torch.load(snapshot_path, map_location=loc)
         self._model.net_.load_state_dict(snapshot["MODEL_STATE"])
-        self.checkpoint_dict['epochs_run'] = snapshot['EPOCHS_RUN']
-        print(f"Snapshot found: {snapshot_path}\nResuming training via Saved Snapshot at Epoch {snapshot['EPOCHS_RUN']}")
+        self.checkpoint_dict["epochs_run"] = snapshot["EPOCHS_RUN"]
+        print(
+            f"Snapshot found: {snapshot_path}\nResuming training via Saved Snapshot at Epoch {snapshot['EPOCHS_RUN']}"
+        )
 
     def _save_snapshot(self, epoch: int) -> None:
         """Save snapshot of training for analysis and/or to continue training at a later date.
@@ -355,13 +349,10 @@ class Fitter(TorchTrainer):
         Returns:
             None.
         """
-        snapshot_path = self.checkpoint_dict['snapshot_path']
-        epochs_run = epoch + self.checkpoint_dict['epochs_run']
-        snapshot_new_path = snapshot_path.rsplit('.',2)[0] + ".E" + str(epochs_run) + ".tar"
-        snapshot = {
-            "MODEL_STATE": self._model.net_.state_dict(),
-            "EPOCHS_RUN": epochs_run
-        }
+        snapshot_path = self.checkpoint_dict["snapshot_path"]
+        epochs_run = epoch + self.checkpoint_dict["epochs_run"]
+        snapshot_new_path = snapshot_path.rsplit(".", 2)[0] + ".E" + str(epochs_run) + ".tar"
+        snapshot = {"MODEL_STATE": self._model.net_.state_dict(), "EPOCHS_RUN": epochs_run}
         torch.save(snapshot, snapshot_new_path)
         print(f"Epoch {epochs_run} | Model Snapshot saved at {snapshot_new_path}")
 
@@ -382,25 +373,25 @@ class Fitter(TorchTrainer):
     def train(self) -> None:
         """Trains the neural network model."""
 
-        # Track epoch time for scaling statistics
-        if self.strategy.is_main_worker and self.strategy.is_distributed:
-            num_nodes = os.environ.get("SLURM_NNODES", "unk")
-            epoch_time_output_dir = Path("scalability-metrics/epoch-time")
-            epoch_time_file_name = f"epochtime_{self.strategy.name}_{num_nodes}N.csv"
-            epoch_time_output_path = epoch_time_output_dir / epoch_time_file_name
+        # # Track epoch time for scaling statistics
+        # if self.strategy.is_main_worker and self.strategy.is_distributed:
+        # num_nodes = os.environ.get("SLURM_NNODES", "unk")
+        # epoch_time_output_dir = Path("scalability-metrics/epoch-time")
+        # epoch_time_file_name = f"epochtime_{self.strategy.name}_{num_nodes}N.csv"
+        # epoch_time_output_path = epoch_time_output_dir / epoch_time_file_name
 
-            epoch_time_logger= EpochTimeTracker(
-                strategy_name=self.strategy.name,
-                save_path=epoch_time_output_path,
-                num_nodes=num_nodes,
-                should_log=self.measure_epoch_time
-            )
+        # epoch_time_logger = EpochTimeTracker(
+        #     strategy_name=self.strategy.name,
+        #     save_path=epoch_time_output_path,
+        #     num_nodes=num_nodes,
+        #     should_log=self.measure_epoch_time,
+        # )
 
         if self.config.save_every == "None":
             self.config.save_every = self.epochs
 
         T1 = time.time()
-        for epoch in range(1, self.epochs+1):
+        for epoch in range(1, self.epochs + 1):
             self.set_epoch(epoch)
             loss, logqp = self.step(self.config.batch_size)
             self.checkpoint(epoch, loss, self.config.save_every)
@@ -447,13 +438,13 @@ class Fitter(TorchTrainer):
         Returns:
             None
         """
-        print_stride = self.checkpoint_dict['print_stride']
-        print_batch_size = self.checkpoint_dict['print_batch_size']
-        snapshot_path = self.checkpoint_dict['snapshot_path']
+        print_stride = self.checkpoint_dict["print_stride"]
+        print_batch_size = self.checkpoint_dict["print_batch_size"]
+        snapshot_path = self.checkpoint_dict["snapshot_path"]
 
         # Always save loss on rank 0
         if self.strategy.is_main_worker:
-            self.train_history['loss'].append(loss.item())
+            self.train_history["loss"].append(loss.item())
             # Save model as well
             if snapshot_path is not None and (epoch % save_every == 0):
                 self._save_snapshot(epoch)
@@ -470,7 +461,20 @@ class Fitter(TorchTrainer):
                 logp = torch.cat(logp, dim=0)
                 loss_ = self.loss_fn(logq, logp)
                 self._append_to_train_history(logq, logp)
-                self.print_fit_status(epoch, loss=loss_)
+                # self.print_fit_status(epoch, loss=loss_)
+                self.logger.log(
+                    item=loss_.item(),
+                    identifier="loss_",
+                    kind="metric",
+                    step=epoch,
+                )
+                # Example: how to log a model checkpoint
+                # self.logger.log(
+                #     item=self._model.net_,
+                #     identifier=f"nn_checkpoint_epoch_{epoch}",
+                #     kind="model",
+                #     step=epoch,
+                # )
 
     @staticmethod
     def calc_kl_mean(logq: torch.Tensor, logp: torch.Tensor) -> torch.Tensor:
@@ -554,8 +558,7 @@ class Fitter(TorchTrainer):
             torch.Tensor: Estimated effective sample size (ESS).
         """
         logqp = logq - logp
-        log_ess = 2*torch.logsumexp(-logqp, dim=0) \
-                - torch.logsumexp(-2*logqp, dim=0)
+        log_ess = 2 * torch.logsumexp(-logqp, dim=0) - torch.logsumexp(-2 * logqp, dim=0)
         ess = torch.exp(log_ess) / len(logqp)  # normalized
         return ess
 
@@ -571,9 +574,8 @@ class Fitter(TorchTrainer):
             torch.Tensor: logarithm of inverse of effective sample size.
         """
         logqp = logq - logp
-        log_ess = 2*torch.logsumexp(-logqp, dim=0) \
-                - torch.logsumexp(-2*logqp, dim=0)
-        return - log_ess + np.log(len(logqp))  # normalized
+        log_ess = 2 * torch.logsumexp(-logqp, dim=0) - torch.logsumexp(-2 * logqp, dim=0)
+        return -log_ess + np.log(len(logqp))  # normalized
 
     @torch.no_grad()
     def _append_to_train_history(self, logq: torch.Tensor, logp: torch.Tensor) -> None:
@@ -587,16 +589,16 @@ class Fitter(TorchTrainer):
             None.
         """
         logqp = logq - logp
-        logz = estimate_logz(logqp, method='jackknife')  # returns (mean, std)
+        logz = estimate_logz(logqp, method="jackknife")  # returns (mean, std)
         accept_rate = self._model.mcmc.estimate_accept_rate(logqp)
         ess = self.calc_ess(logqp, 0)
         rho = self.calc_corrcoef(logq, logp)
         logqp = (logqp.mean().item(), logqp.std().item())
-        self.train_history['logqp'].append(logqp)
-        self.train_history['logz'].append(logz)
-        self.train_history['ess'].append(ess)
-        self.train_history['rho'].append(rho)
-        self.train_history['accept_rate'].append(accept_rate)
+        self.train_history["logqp"].append(logqp)
+        self.train_history["logz"].append(logz)
+        self.train_history["ess"].append(ess)
+        self.train_history["rho"].append(rho)
+        self.train_history["accept_rate"].append(accept_rate)
 
     def print_fit_status(self, epoch: int, loss: torch.Tensor | None = None) -> None:
         """Print training progress and key metrics.
@@ -610,34 +612,34 @@ class Fitter(TorchTrainer):
         """
         mydict = self.train_history
         if loss is None:
-            loss = mydict['loss'][-1]
+            loss = mydict["loss"][-1]
         else:
             pass  # the printed loss can be different from mydict['loss'][-1]
-        logqp_mean, logqp_std = mydict['logqp'][-1]
-        logz_mean, logz_std = mydict['logz'][-1]
-        accept_rate_mean, accept_rate_std = mydict['accept_rate'][-1]
+        logqp_mean, logqp_std = mydict["logqp"][-1]
+        logz_mean, logz_std = mydict["logz"][-1]
+        accept_rate_mean, accept_rate_std = mydict["accept_rate"][-1]
         # We now incorporate the effect of estimated log(z) to mean of log(q/p)
         adjusted_logqp_mean = logqp_mean + logz_mean
-        ess = mydict['ess'][-1]
-        rho = mydict['rho'][-1]
+        ess = mydict["ess"][-1]
+        rho = mydict["rho"][-1]
 
         if epoch == 1:
             print(f"\n>>> Training progress ({self.device}) <<<\n")
-            print("Note: log(q/p) is estimated with normalized p; " \
-                  + "mean & error are obtained from samples in a batch\n")
+            print(
+                "Note: log(q/p) is estimated with normalized p; "
+                + "mean & error are obtained from samples in a batch\n"
+            )
 
-        epoch += self.checkpoint_dict['epochs_run']
+        epoch += self.checkpoint_dict["epochs_run"]
         str1 = f"Epoch: {epoch} | loss: {loss:.4f} | ess: {ess:.4f}"
         print(str1)
-        self.log(loss.detach().cpu().numpy(),'epoch_loss',kind='metric')
+        self.log(loss.detach().cpu().numpy(), "epoch_loss", kind="metric")
 
 
 # =============================================================================
 @torch.no_grad()
 def reverse_flow_sanitychecker(
-    model: Model,
-    n_samples: int = 4,
-    net_: torch.nn.Module | None = None
+    model: Model, n_samples: int = 4, net_: torch.nn.Module | None = None
 ) -> None:
     """Performs a sanity check on the reverse method of modules.
     Args:
