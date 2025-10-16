@@ -46,6 +46,9 @@ under `src/itwinai/plugins/normflow`.
 If you want to use the remote interTwin MLflow server, remember to
 `source mlflow-setup.sh` first.
 
+> ![NOTE]
+> Remember to set the correct credentials in `mlflow-setup.sh`
+
 ## Background
 
 This package provides utilities for implementing the
