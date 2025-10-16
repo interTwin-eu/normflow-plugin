@@ -21,6 +21,7 @@ import sys
 import time
 from typing import Dict, Literal
 
+# ruff: noqa: I001
 import numpy as np
 import torch
 import torch.optim.lr_scheduler as lr_scheduler
@@ -31,10 +32,9 @@ from itwinai.torch.distributed import DeepSpeedStrategy
 from itwinai.torch.monitoring.monitoring import measure_gpu_utilization
 from itwinai.torch.profiling.profiler import profile_torch_trainer
 from itwinai.torch.trainer import TorchTrainer
-from torch.utils.data import Dataset
-
 from normflow import Model
 from normflow.lib.combo import estimate_logz
+from torch.utils.data import Dataset
 
 
 class Fitter(TorchTrainer):
