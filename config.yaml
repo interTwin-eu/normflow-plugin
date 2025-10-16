@@ -23,7 +23,7 @@ strategy: 'ddp'
 training_pipeline:
   _target_: itwinai.pipeline.Pipeline
   steps:
-    - _target_: normflow.Fitter
+    - _target_: itwinai.plugins.normflow.normflowcore.Fitter
       model:
         _target_: normflow.Model
         net_:
@@ -55,7 +55,7 @@ training_pipeline:
       strategy: ${strategy}
       measure_epoch_time: False
       measure_gpu_data: False
-      measure_communication_overhead: False
+      enable_torch_profiling: False
       logger:
         _target_: itwinai.loggers.LoggersCollection
         loggers:
@@ -67,5 +67,5 @@ training_pipeline:
             experiment_name: Normalizing flows (ETHZ/CSIC)
             log_freq: batch
             # if you comment this line, mlflow will store results locally by default
-            tracking_uri: https://mlflow.intertwin.fedcloud.eu/
+            #tracking_uri: https://mlflow.intertwin.fedcloud.eu/
 

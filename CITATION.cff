@@ -9,10 +9,25 @@ message: >-
 type: software
 
 authors:
+  - given-names: Javad
+    family-names: Komijani
+    email: jkomijani@gmail.com
+    affiliation: ETH Zurich
+    orcid: 'https://orcid.org/0000-0002-6943-8735'
+  - given-names: Gaurav
+    family-names: Ray
+    email: g.ray@csic.es
+    affiliation: CSIC
+    orcid: 'https://orcid.org/0000-0003-1956-7659'
   - given-names: Rakesh
     family-names: Sarma
     email: r.sarma@fz-juelich.de
     affiliation: Forschungszentrum Jülich
+  - given-names: Matteo
+    family-names: Bunino
+    email: matteo.bunino@cern.ch
+    affiliation: CERN
+    orcid: 'https://orcid.org/0009-0008-5100-9300'
   
 repository-code: 'https://github.com/interTwin-eu/normflow-plugin'
 # url: 'https://itwinai.readthedocs.io/'

@@ -7,171 +7,38 @@
 # - Javad Komijani <jkomijani@gmail.com> - ETHZ
 # - Gaurav Sinha Ray <sinha@ifca.unican.es> - CSIC
 # - Rakesh Sarma <r.sarma@fz-juelich.de> - Juelich
+# - Matteo Bunino - CERN
 # --------------------------------------------------------------------------------------
 
-# Copyright (c) 2021-2024 Javad Komijani
+"""This module contains high-level classes for normalizing flow techniques, with
+the central `Model` class integrating essential components such as priors,
+networks, and actions. It provides utilities for training and sampling, along
+with support for MCMC sampling. It also integrates with the itwinai package to
+perform distributed training, profiling and logging."""
 
-"""This module contains high-level classes for normalizing flow techniques,
-with the central `Model` class integrating essential components such as priors,
-networks, and actions. It provides utilities for training and sampling,
-along with support for MCMC sampling. It also integrates with the itwinai package
-to perform distributed training, profiling and logging.
-"""
-
-import torch
-import torch.distributed as dist
-import time
 import os
 import sys
-from pathlib import Path
-from typing import Any, Callable, Dict, Literal, Optional, Tuple
-from torch.utils.data import Dataset
-import torch.optim.lr_scheduler as lr_scheduler
+import time
+from typing import Dict, Literal
+
 import numpy as np
-
-from .mcmc import MCMCSampler, BlockedMCMCSampler
-from .lib.combo import estimate_logz, fmt_val_err
-from normflow.prior import Prior
-from normflow.nn import ModuleList_
-from normflow.action.scalar_action import ScalarPhi4Action
-
-from itwinai.torch.trainer import TorchTrainer
-from itwinai.torch.distributed import DeepSpeedStrategy
+import torch
+import torch.optim.lr_scheduler as lr_scheduler
+from itwinai.distributed import suppress_workers_print
 from itwinai.loggers import Logger
+from itwinai.torch.config import TrainingConfiguration
+from itwinai.torch.distributed import DeepSpeedStrategy
 from itwinai.torch.monitoring.monitoring import measure_gpu_utilization
 from itwinai.torch.profiling.profiler import profile_torch_trainer
-from itwinai.distributed import suppress_workers_print
-from itwinai.torch.config import TrainingConfiguration
+from itwinai.torch.trainer import TorchTrainer
+from torch.utils.data import Dataset
 
-
-class Model:
-    """The central high-level class of the package, which integrates instances of
-    essential classes (`prior`, `net_`, and `action`) to provide utilities for
-    training and sampling. This class interfaces with various core components
-    to facilitate training, posterior inference and MCMC sampling.
-
-    Args:
-        prior (Prior): instance of a `Prior` class
-            An instance of a Prior class (e.g., `NormalPrior`) representing the
-            model's prior distribution.
-        net_ (Module_): instance of a `Module_` class
-            A model component responsible for the transformations required in the
-            model. The trailing underscore indicates that the associated forward
-            method computes and returns the Jacobian of the transformation, which
-            is crucial in the method of normalizing flows.
-        action (Action): instance of an `ScalarPhi4Action` class
-            Defines the model's action, which specified the target distribution
-            during training.
-
-    Attributes:
-        posterior (Posterior): An instance of the Posterior class,
-            which manages posterior inference on the model parameters.
-        mcmc (MCMCSampler): An instance of the MCMCSampler class, enabling
-            MCMC sampling for posterior distributions.
-        blocked_mcmc (BlockedMCMCSampler): An instance of the BlockedMCMCSampler class,
-            providing blockwise MCMC sampling for improved sampling efficiency.
-    """
-
-    def __init__(self, *, prior: Prior, net_: ModuleList_, action: ScalarPhi4Action):
-        self.net_ = net_
-        self.prior = prior
-        self.action = action
-
-        self.posterior = Posterior(self)
-        self.mcmc = MCMCSampler(self)
-        self.blocked_mcmc = BlockedMCMCSampler(self)
-
-
-class Posterior:
-    """Creates samples directly from a trained probabilistic model.
-    The `Posterior` class generates samples from a specified model without
-    using an accept-reject step, making it suitable for tasks that require
-    quick, direct sampling. All methods in this class use `torch.no_grad()`
-    to prevent gradient computation.
-
-    Args:
-        model (Model): A trained model to sample from.
-    """
-
-    def __init__(self, model: Model):
-        self._model = model
-
-    @torch.no_grad()
-    def sample(self, batch_size: int = 1, **kwargs) -> torch.Tensor:
-        """Draws samples from the model.
-
-        Args:
-            batch_size (int, optional): Number of samples to draw. Defaults to 1.
-
-        Returns:
-            torch.Tensor: Generated samples.
-        """
-        return self.sample_(batch_size=batch_size, **kwargs)[0]
-
-    @torch.no_grad()
-    def sample_(
-        self, batch_size: int = 1, preprocess_func: Callable | None = None
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Draws samples and their log probabilities from the model.
-
-        Args:
-            batch_size (int, optional): Number of samples to draw. Defaults to 1.
-            preprocess_func (Callable, optional): A function to adjust the prior
-                samples if needed. It should take samples and log probabilities as
-                input and return modified values.
-
-        Returns:
-            Tuple[torch.Tensor, torch.Tensor]:
-                - `y`: Generated samples.
-                - `logq`: Log probabilities of the samples.
-        """
-        x, logr = self._model.prior.sample_(batch_size)
-
-        if preprocess_func is not None:
-            x, logr = preprocess_func(x, logr)
-
-        y, logj = self._model.net_(x)
-        logq = logr - logj
-        return y, logq
-
-    @torch.no_grad()
-    def sample__(
-        self, batch_size: int = 1, **kwargs
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Similar to `sample_`, but also returns the log probability of the
-        target distribution from `model.action`.
-
-        Args:
-            batch_size (int, optional): Number of samples to draw. Defaults to 1.
-
-        Returns:
-            Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-                - `y`: Generated samples.
-                - `logq`: Log probabilities of the samples.
-                - `logp`: Log probabilities from the target distribution.
-        """
-        y, logq = self.sample_(batch_size=batch_size, **kwargs)
-        logp = -self._model.action(y)  # logp is log(p_{non-normalized})
-        return y, logq, logp
-
-    @torch.no_grad()
-    def log_prob(self, y: torch.Tensor) -> torch.Tensor:
-        """Computes the log probability of the provided samples.
-
-        Args:
-            y (torch.Tensor): Samples for which to calculate the log probability.
-
-        Returns:
-            torch.Tensor: Log probabilities of the samples.
-        """
-        x, minus_logj = self._model.net_.reverse(y)
-        logr = self._model.prior.log_prob(x)
-        logq = logr + minus_logj
-        return logq
+from normflow import Model
+from normflow.lib.combo import estimate_logz
 
 
 class Fitter(TorchTrainer):
-    """A class for training a given model."""
+    """A class for training a given model, based on the itwinai TorchTrainer."""
 
     def __init__(
         self,
@@ -183,7 +50,11 @@ class Fitter(TorchTrainer):
         **kwargs,
     ):
         super().__init__(
-            config=config, epochs=epochs, strategy=strategy, logger=logger, **kwargs
+            config=config,
+            epochs=epochs,
+            strategy=strategy,
+            logger=logger,
+            **kwargs,
         )
         self._model = model
         self.epochs = epochs
@@ -199,17 +70,28 @@ class Fitter(TorchTrainer):
             epochs_run=self.config.epochs_run,
         )
         self.train_batch_size = 1
-        self.train_history = dict(loss=[], logqp=[], logz=[], ess=[], rho=[], accept_rate=[])
-        self.hyperparam = dict(lr=self.config.optim_lr, weight_decay=self.config.weight_decay)
+        self.train_history = dict(
+            loss=[],
+            logqp=[],
+            logz=[],
+            ess=[],
+            rho=[],
+            accept_rate=[],
+        )
+        self.hyperparam = dict(
+            lr=self.config.optim_lr,
+            weight_decay=self.config.weight_decay,
+        )
 
     def setup_seed(self, rank: int, world_size: int) -> None:
-        """Sets up random seed for each worker in a distributed setting.
-        This methods ensures that each workers receives a unique seed. The main worker
-        generates the seeds and broadcasts to other workers.
+        """Sets up random seed for each worker in a distributed setting.  This
+        methods ensures that each workers receives a unique seed. The main
+        worker generates the seeds and broadcasts to other workers.
 
         Args:
             rank (int): The rank of the current worker.
-            world_size (int): The total number of workers in the distributed setting
+            world_size (int): The total number of workers in the distributed
+                setting
 
         Returns:
             None
@@ -372,20 +254,6 @@ class Fitter(TorchTrainer):
     @measure_gpu_utilization
     def train(self) -> None:
         """Trains the neural network model."""
-
-        # # Track epoch time for scaling statistics
-        # if self.strategy.is_main_worker and self.strategy.is_distributed:
-        # num_nodes = os.environ.get("SLURM_NNODES", "unk")
-        # epoch_time_output_dir = Path("scalability-metrics/epoch-time")
-        # epoch_time_file_name = f"epochtime_{self.strategy.name}_{num_nodes}N.csv"
-        # epoch_time_output_path = epoch_time_output_dir / epoch_time_file_name
-
-        # epoch_time_logger = EpochTimeTracker(
-        #     strategy_name=self.strategy.name,
-        #     save_path=epoch_time_output_path,
-        #     num_nodes=num_nodes,
-        #     should_log=self.measure_epoch_time,
-        # )
 
         if self.config.save_every == "None":
             self.config.save_every = self.epochs
@@ -634,30 +502,3 @@ class Fitter(TorchTrainer):
         str1 = f"Epoch: {epoch} | loss: {loss:.4f} | ess: {ess:.4f}"
         print(str1)
         self.log(loss.detach().cpu().numpy(), "epoch_loss", kind="metric")
-
-
-# =============================================================================
-@torch.no_grad()
-def reverse_flow_sanitychecker(
-    model: Model, n_samples: int = 4, net_: torch.nn.Module | None = None
-) -> None:
-    """Performs a sanity check on the reverse method of modules.
-    Args:
-        model (Model): Model containing prior and transformation networks.
-        n_samples (int, optional): Number of samples to test. Defaults to 4.
-        net_ (torch.nn.Module, optional): The transformation network.
-
-    Returns:
-        None
-    """
-    if net_ is None:
-        net_ = model.net_
-
-    x = model.prior.sample(n_samples)
-    y, logj = net_(x)
-    x_hat, minus_logj = net_.backward(y)
-
-    mean = lambda z: z.abs().mean().item()
-
-    print("reverse method is OK if following values vanish (up to round off):")
-    print(f"{mean(x - x_hat):g} & {mean(1 + minus_logj / logj):g}")

@@ -19,11 +19,14 @@
 export SRUN_CPUS_PER_TASK="$SLURM_CPUS_PER_TASK"
 
 # Load necessary modules
-ml Stages/2024 GCC OpenMPI CUDA/12 MPI-settings/CUDA Python HDF5 PnetCDF libaio mpi4py
+ml --force purge
+ml Stages/2025 GCC OpenMPI CUDA/12 cuDNN MPI-settings/CUDA
+ml Python CMake HDF5 PnetCDF libaio mpi4py git
 
+# Now you can create or active the python environment here
 # Activate the virtual environment
 # shellcheck disable=SC1091
-source ../../.venv/bin/activate
+source .venv/bin/activate
 
 export MASTER_ADDR="$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)"
 if [ "$SYSTEMNAME" = juwelsbooster ] \
