@@ -67,5 +67,5 @@ training_pipeline:
             experiment_name: Normalizing flows (ETHZ/CSIC)
             log_freq: batch
             # if you comment this line, mlflow will store results locally by default
-            #tracking_uri: https://mlflow.intertwin.fedcloud.eu/
+            tracking_uri: https://mlflow.intertwin.fedcloud.eu/
 
