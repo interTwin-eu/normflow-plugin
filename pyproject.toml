@@ -11,7 +11,7 @@ readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "User Name", email = "user@example.com" }]
 dependencies = [
-    "itwinai[torch]",
+    "itwinai[torch]==0.3.4",
     "pytest>=8.3.4",
     "normflow@git+https://github.com/jkomijani/normflow_@6ee62ec62f54bc67113d42907ee11cbb25689232",
 ]
