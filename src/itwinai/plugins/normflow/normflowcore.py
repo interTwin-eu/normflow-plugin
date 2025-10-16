@@ -31,10 +31,9 @@ from itwinai.torch.distributed import DeepSpeedStrategy
 from itwinai.torch.monitoring.monitoring import measure_gpu_utilization
 from itwinai.torch.profiling.profiler import profile_torch_trainer
 from itwinai.torch.trainer import TorchTrainer
-from torch.utils.data import Dataset
-
 from normflow import Model
 from normflow.lib.combo import estimate_logz
+from torch.utils.data import Dataset
 
 
 class Fitter(TorchTrainer):
@@ -219,7 +218,8 @@ class Fitter(TorchTrainer):
         self._model.net_.load_state_dict(snapshot["MODEL_STATE"])
         self.checkpoint_dict["epochs_run"] = snapshot["EPOCHS_RUN"]
         print(
-            f"Snapshot found: {snapshot_path}\nResuming training via Saved Snapshot at Epoch {snapshot['EPOCHS_RUN']}"
+            f"Snapshot found: {snapshot_path}\nResuming training "
+            f"via Saved Snapshot at Epoch {snapshot['EPOCHS_RUN']}"
         )
 
     def _save_snapshot(self, epoch: int) -> None:
@@ -483,13 +483,13 @@ class Fitter(TorchTrainer):
             loss = mydict["loss"][-1]
         else:
             pass  # the printed loss can be different from mydict['loss'][-1]
-        logqp_mean, logqp_std = mydict["logqp"][-1]
-        logz_mean, logz_std = mydict["logz"][-1]
-        accept_rate_mean, accept_rate_std = mydict["accept_rate"][-1]
-        # We now incorporate the effect of estimated log(z) to mean of log(q/p)
-        adjusted_logqp_mean = logqp_mean + logz_mean
+        # logqp_mean, logqp_std = mydict["logqp"][-1]
+        # logz_mean, logz_std = mydict["logz"][-1]
+        # accept_rate_mean, accept_rate_std = mydict["accept_rate"][-1]
+        # # We now incorporate the effect of estimated log(z) to mean of log(q/p)
+        # adjusted_logqp_mean = logqp_mean + logz_mean
         ess = mydict["ess"][-1]
-        rho = mydict["rho"][-1]
+        # rho = mydict["rho"][-1]
 
         if epoch == 1:
             print(f"\n>>> Training progress ({self.device}) <<<\n")

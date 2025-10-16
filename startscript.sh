@@ -28,7 +28,8 @@ ml Python CMake HDF5 PnetCDF libaio mpi4py git
 # shellcheck disable=SC1091
 source .venv/bin/activate
 
-export MASTER_ADDR="$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)"
+MASTER_ADDR="$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)"
+export MASTER_ADDR
 if [ "$SYSTEMNAME" = juwelsbooster ] \
        || [ "$SYSTEMNAME" = juwels ] \
        || [ "$SYSTEMNAME" = jurecadc ] \
