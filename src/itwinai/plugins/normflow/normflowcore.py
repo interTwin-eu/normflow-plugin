@@ -321,9 +321,10 @@ class Fitter(TorchTrainer):
         print_batch_size = print_batch_size // self.strategy.global_world_size()
 
         if epoch == 1 or (epoch % print_stride == 0):
-            _, logq, logp = self._model.posterior.sample__(print_batch_size)
+            samp, logq, logp = self._model.posterior.sample__(print_batch_size)
             logq = self.strategy.gather(logq)
             logp = self.strategy.gather(logp)
+            samp = self.strategy.gather(samp)
 
             if self.strategy.is_main_worker:
                 logq = torch.cat(logq, dim=0)
@@ -333,7 +334,23 @@ class Fitter(TorchTrainer):
                 # self.print_fit_status(epoch, loss=loss_)
                 self.logger.log(
                     item=loss_.item(),
-                    identifier="loss_",
+                    identifier="loss",
+                    kind="metric",
+                    step=epoch,
+                )
+                samp = torch.cat(samp, dim=0)
+                samp = samp.reshape(len(samp), -1)
+                mean_field = samp.mean()
+                susceptibility = samp.var(dim=-1).mean()
+                self.logger.log(
+                    item=mean_field.item(),
+                    identifier="mean-field",
+                    kind="metric",
+                    step=epoch,
+                )
+                self.logger.log(
+                    item=susceptibility.item(),
+                    identifier="naive-susceptibility",
                     kind="metric",
                     step=epoch,
                 )

@@ -1,0 +1,68 @@
+# General configuration
+batch_size: 128
+epochs: 200
+optim_lr: 0.001
+weight_decay: 0.01
+shape: [8, 8]
+kappa: 0.67
+m_sq: -2.68
+lambd: 0.5
+ckpt_disp: False
+save_every: None
+optimizer_class: torch.optim.AdamW
+loss_fn: None
+scheduler: None
+print_stride: 1
+print_batch_size: 1024
+snapshot_path: null
+epochs_run: 0
+strategy: 'ddp'
+
+training_pipeline:
+  _target_: itwinai.pipeline.Pipeline
+  steps:
+    - _target_: itwinai.plugins.normflow.normflowcore.Fitter
+      model:
+        _target_: normflow.Model
+        net_:
+          _target_: itwinai.plugins.normflow.scalar_psd_affine.ScalarPSDAffineCoupling
+          lat_shape: ${shape}
+        prior:
+          _target_: normflow.prior.NormalPrior
+          shape: ${shape}
+        action:
+          _target_: normflow.action.ScalarPhi4Action
+          kappa: ${kappa}
+          m_sq: ${m_sq}
+          lambd: ${lambd}
+      config:
+        optim_lr: ${optim_lr}
+        weight_decay: ${weight_decay}
+        save_every: ${save_every}
+        ckpt_disp: ${ckpt_disp}
+        batch_size: ${batch_size}
+        optimizer_class: ${optimizer_class}
+        scheduler: ${scheduler}
+        loss_fn: ${loss_fn}
+        print_stride: ${print_stride}
+        print_batch_size: ${print_batch_size}
+        snapshot_path: ${snapshot_path}
+        epochs_run: ${epochs_run}
+      epochs: ${epochs}
+      strategy: ${strategy}
+      measure_epoch_time: False
+      measure_gpu_data: False
+      enable_torch_profiling: False
+      logger:
+        _target_: itwinai.loggers.LoggersCollection
+        loggers:
+          - _target_: itwinai.loggers.ConsoleLogger
+            log_freq: 1
+
+            # https://itwinai.readthedocs.io/latest/api/itwinai.loggers.html#itwinai.loggers.MLFlowLogger
+          - _target_: itwinai.loggers.MLFlowLogger
+            experiment_name: Normalizing flows (ETHZ/CSIC)
+            log_freq: batch
+            # if you comment this line, mlflow will store results locally by default
+            tracking_uri: https://mlflow.intertwin.fedcloud.eu/
+
