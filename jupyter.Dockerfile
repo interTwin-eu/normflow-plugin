@@ -29,3 +29,5 @@ COPY  --chown=${NB_UID} config_8x8.yaml config_8x8.yaml
 
 # DO NOT SET AN ENTRYPOINT OR A CMD, unless you know what you are doing
 # Otherwise you risk of breaking the spawn in JupyterHub
+
+LABEL org.opencontainers.image.url="https://github.com/interTwin-eu/normflow-plugin"
