@@ -1,12 +1,15 @@
 # This is a sample Dockerfile for JupyterLab containers based on itwinai containers
 
-# DO NOT UPGRADE OR DOWNGRRADE ALL JUPYTER PACKAGES (E.G., JUPYTERLAB), unless you know what you are doing
+# DO NOT UPGRADE OR DOWNGRADE ALL JUPYTER PACKAGES (E.G., JUPYTERLAB), unless you know what you are doing
 # Otherwise you risk of breaking the spawn in JupyterHub
 
 FROM ghcr.io/intertwin-eu/itwinai:jlab-slim-latest
 
 # Set working directory
-WORKDIR "$HOME/app"
+WORKDIR /app
+
+# Remove itwinai data under /app
+RUN rm -rf tests src pyptoject.toml Dockerfile
 
 # Copy application dependencies.
 # Remember that you are not root in this container, so you need to
@@ -17,8 +20,14 @@ COPY  --chown=${NB_UID} src src
 # Install dependencies
 RUN pip install --no-cache-dir .
 
-# Copy your scripts
-COPY  --chown=${NB_UID} main.py main.py
+# Copy tests
+COPY --chown=${NB_UID} tests tests
+
+# Copy scripts/conf
+COPY  --chown=${NB_UID} config.yaml config.yaml
+COPY  --chown=${NB_UID} config_8x8.yaml config_8x8.yaml
 
 # DO NOT SET AN ENTRYPOINT OR A CMD, unless you know what you are doing
 # Otherwise you risk of breaking the spawn in JupyterHub
+
+LABEL org.opencontainers.image.url="https://github.com/interTwin-eu/normflow-plugin"

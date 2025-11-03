@@ -11,9 +11,9 @@ readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "User Name", email = "user@example.com" }]
 dependencies = [
-    "itwinai[torch]",
+    "itwinai[torch]==0.3.4",
     "pytest>=8.3.4",
-    "normflow"
+    "normflow@git+https://github.com/jkomijani/normflow_@6ee62ec62f54bc67113d42907ee11cbb25689232",
 ]
 
 [tool.setuptools.packages.find]
@@ -23,12 +23,7 @@ where = ["src"]
 
 # Make sure to list all the plugin subfolders here,
 # otherwise the plugin may not be installed correctly!
-include = [
-    "itwinai.plugins.normflow",
-]
-
-[tool.uv.sources]
-normflow = { path = "src/itwinai/plugins/normflow" }
+include = ["itwinai.plugins.normflow"]
 
 # Ruff configuration: https://docs.astral.sh/ruff/configuration/
 [tool.ruff]
