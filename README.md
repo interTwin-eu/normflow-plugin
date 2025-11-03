@@ -10,7 +10,7 @@ for integration of the Lattice QCD use-case in the interTwin project.
 This plugin allows the `normflow` developers to continue their developments
 independently in this repository, which is already integrated with itwinai.
 For further details about the normflow package, you are referred to the
-repository of the use-case [in this repository](https://github.com/jkomijani/normflow_).
+[repository](https://github.com/jkomijani/normflow_) of the use-case.
 
 Integration Authors:
 
