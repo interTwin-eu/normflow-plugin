@@ -6,8 +6,8 @@ name: SQAaaS
 
 on:
   push:
-  #test3
-    # branches: [main]
+  
+     branches: [main]
   # pull_request:
 
 
