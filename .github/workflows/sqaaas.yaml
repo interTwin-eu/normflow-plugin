@@ -6,7 +6,8 @@ name: SQAaaS
 
 on:
   push:
-    # branches: [main]
+  
+     branches: [main]
   # pull_request:
 
 
@@ -21,10 +22,9 @@ jobs:
           name: workflow_validation_step
           tool: commands
           commands: |
-            python -m venv .venv &&
-            source .venv/bin/activate &&
-            .venv/bin/pip install . &&
-            .venv/bin/pytest -v tests/
+            python3 -m venv .venv ;.venv/bin/pip install .; .venv/bin/pytest 
+
+
           container: eoscsynergy/sqaaas-micromamba:1.5.3-1-rc.8
       - name: Print out payload
         run: cat workflow_validation_step.json
